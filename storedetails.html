@@ -25,7 +25,7 @@
     .store-link{ color:var(--text); text-decoration:none }
     .store-link:hover{ color:var(--accent); text-decoration:underline }
 
-    /* Table styling */
+    /* Table styling matching the dashboard theme */
     .data-table{width:100%;border-collapse:separate;border-spacing:0;border:1px solid #1e293b;border-radius:12px;overflow:hidden;background:#0b1220}
     .data-table thead th{background:#0e1524;color:#cbd5e1;text-align:left;font-weight:600;font-size:13px;padding:10px 12px;border-bottom:1px solid #1e293b}
     .data-table tbody td{padding:10px 12px;font-size:13px;color:#e5e7eb;border-bottom:1px solid #1e293b}
@@ -91,11 +91,9 @@
         host.innerHTML = '';
         (rows || []).forEach(function(r){
           var tr = document.createElement('tr');
-          // Accept either `product` or `article` from the API
-          var product = (r.product != null ? r.product : r.article);
           tr.appendChild(cell('td', r.id));
-          tr.appendChild(cell('td', product));
-          tr.appendChild(cell('td', r.qty));
+          tr.appendChild(cell('td', r.product));     // <-- product field
+          tr.appendChild(cell('td', r.quantity));    // <-- quantity field
           host.appendChild(tr);
         });
         badge.textContent = (rows?.length || 0) + ' records';
@@ -107,14 +105,12 @@
       host.innerHTML = '<tr><td colspan="3">Loading…</td></tr>';
       badge.textContent = '…';
 
-      // Use the Netlify proxy
+      // Use the Netlify proxy you set in netlify.toml
       var ENDPOINT = '/api/get-stock';
 
-      // Fetch data
       fetch(ENDPOINT + '?store=' + encodeURIComponent(store), {
         method: 'GET'
-        // If you DID NOT inject X-API-Key in netlify.toml and need it client-side (not recommended):
-        // headers: { 'X-API-Key': 'YOUR_SECRET' }
+        // If you inject a secret header via netlify.toml, no need to add it here.
       })
       .then(function(res){
         if(!res.ok) throw new Error('Request failed: ' + res.status);
