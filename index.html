@@ -1,0 +1,403 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Wohle Sale Terranova Vintage - Analytics</title>
+  <meta name="color-scheme" content="dark light">
+  <meta name="robots" content="noindex">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#0b1220; --card:#0f172a; --text:#e5e7eb; --muted:#93a2b7; --accent:#3b82f6; --good:#22c55e; --bad:#ef4444; --gap-s:8px; --gap-m:12px; --gap-l:16px; --pad-card:16px; --chart-h-store:160px; --chart-h-pie:300px }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    h1{margin:0 0 16px;font-size:28px}
+
+    .grid{display:grid;gap:var(--gap-l);grid-template-columns:repeat(2,1fr)}
+    .grid-3{display:grid;gap:var(--gap-l);grid-template-columns:repeat(3,1fr)}
+    .grid-global{display:grid;gap:var(--gap-l);grid-template-columns:1fr 1fr;align-items:stretch}
+    .stack{display:grid;gap:var(--gap-m)}
+
+    .card{background:var(--card);border:1px solid #1e293b;border-radius:14px;padding:var(--pad-card);box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 8px 24px rgba(0,0,0,.25)}
+    .kpi{font-size:13px;color:var(--muted);margin-bottom:6px}
+    .row-between{display:flex;justify-content:space-between;align-items:center;gap:var(--gap-m)}
+    .row{display:flex;align-items:center;gap:var(--gap-m)}
+    .val{font-size:28px;font-weight:700}
+    .pill{font-size:12px;padding:4px 8px;border-radius:999px;background:#162235;color:#cbd5e1}
+    .dot{width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 8px rgba(34,197,94,.85)}
+    .dot.off{background:#64748b;box-shadow:none}
+
+    .chart-wrap{height:var(--chart-h-store)}
+    canvas{background:var(--card);border-radius:14px;border:1px solid #1e293b;width:100%;height:100%}
+
+    .foot{margin-top:16px;color:var(--muted);font-size:12px}
+
+    @media (max-width:1100px){ .grid{grid-template-columns:repeat(2,1fr)} .grid-global{grid-template-columns:1fr} .stack-equal{min-height:auto;grid-template-rows:auto} }
+    @media (max-width:700px){ .grid{grid-template-columns:1fr} .grid-3{grid-template-columns:1fr} }
+
+    /* Metric mini cards */
+    .triple{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap-m);margin:var(--gap-s) 0}
+    .mini{background:#0b1220;border:1px solid #1e293b;border-radius:12px;padding:10px 12px;height:auto}
+    .mini.subtle{background:#0e1524;border-color:#223045;box-shadow:0 0 0 1px rgba(107,138,168,.12) inset, 0 4px 14px rgba(0,0,0,.18)}
+    .mini .label{font-size:12px;color:var(--muted);margin:0 0 4px}
+    .mini .number{font-size:22px;font-weight:800}
+
+    /* Subtle highlight + centering for top totals */
+    .mini.totals{background:linear-gradient(180deg, #0f1a2a 0%, #0c1423 100%); border-color:#223045; box-shadow:0 0 0 1px rgba(107,138,168,.10) inset, 0 6px 18px rgba(0,0,0,.22); text-align:center}
+    .mini.totals .label{color:#a8b8cc}
+    .mini.totals .number{color:#e7edf5}
+
+    /* Level indicators for stock */
+    .level-list{display:grid;gap:var(--gap-s)}
+    .level{display:grid;grid-template-columns:140px 1fr 48px;gap:10px;align-items:center;background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:8px 10px}
+    .level .brand{font-size:13px;color:#cbd5e1}
+    .level-bar{height:10px;background:#0b1220;border:1px solid #1e293b;border-radius:999px;overflow:hidden}
+    .level-fill{height:100%;background:linear-gradient(90deg,#2f4858,#6b8aa8)}
+    .status-dot{justify-self:end;width:10px;height:10px;border-radius:50%;background:var(--good);box-shadow:0 0 8px rgba(34,197,94,.85)}
+    .status-dot.bad{background:var(--bad);box-shadow:0 0 8px rgba(239,68,68,.75)}
+
+    /* Pie column */
+    .pie-col{display:flex;flex-direction:column;height:100%}
+    .pie-col .chart-wrap{height:var(--chart-h-pie)}
+
+    /* Right column equal height to pie */
+    .stack-equal{min-height:var(--chart-h-pie);grid-template-rows:repeat(3,1fr)}
+    .stack-equal .mini{height:100%;display:flex;flex-direction:column;justify-content:center}
+    .stack-equal .row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap-m)}
+    .stack-equal .row .mini{height:100%}
+    /* Center content for totals only */
+    .stack-equal .mini.totals{align-items:center;justify-content:center}
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app">
+    <h1>Wohle Sale Terranova Vintage - Analytics</h1>
+
+    <!-- GLOBAL OVERVIEW (single card) -->
+    <div class="card" id="globalCard">
+      <div class="grid-global">
+        <!-- Left: Top 3 Brands Pie Chart -->
+        <div class="pie-col">
+          <div class="chart-wrap"><canvas id="topBrandsChart" aria-label="Top 3 brands pie chart" role="img"></canvas></div>
+        </div>
+        <!-- Right: KPI mini cards stacked -->
+        <div class="stack stack-equal">
+          <div class="mini totals subtle">
+            <div class="label">Top Store Today</div>
+            <div class="number" id="cardTopStore">–</div>
+          </div>
+          <div class="row">
+            <div class="mini subtle totals" style="flex:1">
+              <div class="label">Total Sales</div>
+              <div class="number" id="cardTotalSales">–</div>
+            </div>
+            <div class="mini subtle totals" style="flex:1">
+              <div class="label">Total Visits</div>
+              <div class="number" id="cardTotalVisits">–</div>
+            </div>
+          </div>
+          <div class="mini subtle totals">
+            <div class="label">Total Converstion Rate</div>
+            <div class="number" id="cardConvRate">– %</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STORES -->
+    <h2 style="margin:18px 0 8px;font-size:20px">Stores</h2>
+    <div class="grid" id="stores"></div>
+
+    <div class="foot" id="updated">–</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script>
+    // -------------------- Helpers (ES5) --------------------
+    var nf = (window.Intl && typeof Intl.NumberFormat === 'function') ? new Intl.NumberFormat('en-US') : { format: function(n){ var s = String(Math.round(n)); return s.replace(/\B(?=(\d{3})+(?!\d))/g, ','); } };
+    function pct(v, d){ if(typeof d==='undefined') d=1; var m=Math.pow(10,d); return (Math.round(v*m)/m).toFixed(d); }
+    function makeLinearGradient(context, c1, c2){
+      var chart = context && context.chart ? context.chart : null; if(!chart || !chart.chartArea) return c1;
+      var area = chart.chartArea; var ctx = chart.ctx; var gr = ctx.createLinearGradient(0, area.bottom, 0, area.top);
+      gr.addColorStop(0, c1); gr.addColorStop(1, c2); return gr;
+    }
+
+    // -------------------- Example Data --------------------
+    var HOURS = ["8","9","10","11","12","13","14","15","16","17","18"];
+    var BRANDS = ["Patagonia","Carhartt","Tommy Hilfiger","Nike","Adidas","Levi's","The North Face","Polo"];
+
+    var storeBase = [
+      { name: 'Vienna', online:true, conv:0.23,
+        visits:[28,42,58,72,96,130,150,120,95,70,40],
+        stock:{ 'Patagonia':90,'Carhartt':110,'Tommy Hilfiger':80,'Nike':230,'Adidas':210, "Levi's":160,'The North Face':100,'Polo':70 }
+      },
+      { name: 'Munich', online:true, conv:0.19,
+        visits:[18,26,36,48,62,88,104,86,68,54,30],
+        stock:{ 'Patagonia':140,'Carhartt':160,'Tommy Hilfiger':12,'Nike':140,'Adidas':120, "Levi's":180,'The North Face':90,'Polo':8 }
+      },
+      { name: 'Hamburg', online:true, conv:0.17,
+        visits:[12,20,28,36,50,70,82,66,52,40,22],
+        stock:{ 'Patagonia':8,'Carhartt':90,'Tommy Hilfiger':60,'Nike':120,'Adidas':190, "Levi's":90,'The North Face':10,'Polo':50 }
+      },
+      { name: 'Amsterdam', online:true, conv:0.22,
+        visits:[24,34,48,62,84,120,138,118,92,66,36],
+        stock:{ 'Patagonia':160,'Carhartt':120,'Tommy Hilfiger':140,'Nike':200,'Adidas':150, "Levi's":110,'The North Face':95,'Polo':85 }
+      }
+    ];
+
+    function deriveSalesByHour(visits, conv){
+      var hourFactor = []; var i;
+      for(i=0;i<HOURS.length;i++){
+        var hr = parseInt(HOURS[i],10);
+        hourFactor.push(hr>=12 && hr<=15 ? 1.1 : (hr<=9 || hr>=17 ? 0.9 : 1.0));
+      }
+      var out = []; for(i=0;i<visits.length;i++){ out.push(Math.round(visits[i]*conv*hourFactor[i])); }
+      return out;
+    }
+
+    // -------------------- Build Store Objects --------------------
+    var stores = [];
+    (function(){
+      for(var s=0; s<storeBase.length; s++){
+        var sb = storeBase[s];
+        var salesArr = deriveSalesByHour(sb.visits, sb.conv);
+        var totVisits = 0, totSales = 0, i;
+        for(i=0;i<sb.visits.length;i++){ totVisits += sb.visits[i]; }
+        for(i=0;i<salesArr.length;i++){ totSales += salesArr[i]; }
+        stores.push({ name: sb.name, online: sb.online, conv: sb.conv, visits: sb.visits, stock: sb.stock, sales: salesArr, totals: { visits: totVisits, sales: totSales }, convRate: totVisits ? (totSales/totVisits) : 0 });
+      }
+    })();
+
+    // -------------------- Overall --------------------
+    var overall = { visits:0, sales:0, stock:{} };
+    (function(){
+      for(var a=0;a<stores.length;a++){
+        overall.visits += stores[a].totals.visits;
+        overall.sales  += stores[a].totals.sales;
+        for(var b=0;b<BRANDS.length;b++){
+          var br = BRANDS[b];
+          overall.stock[br] = (overall.stock[br]||0) + (stores[a].stock[br]||0);
+        }
+      }
+      overall.conv = overall.visits ? (overall.sales/overall.visits) : 0;
+    })();
+
+    // -------------------- Brand Sales Allocation --------------------
+    // Override brand sales distribution to: Levi's 15%, Nike 45%, Adidas 40% of total sales
+    var brandSales = (function(){
+      var total = overall && overall.sales ? overall.sales : 0;
+      var targets = [ {b:"Levi's", p:0.15}, {b:'Nike', p:0.45}, {b:'Adidas', p:0.40} ];
+      var out = {}; var i; for(i=0;i<BRANDS.length;i++){ out[BRANDS[i]] = 0; }
+      var allocated = 0;
+      for(i=0;i<targets.length;i++){ var v = Math.floor(total * targets[i].p); out[targets[i].b] = v; allocated += v; }
+      var rem = total - allocated; // hand out the remaining units by largest share first
+      targets.sort(function(a,b){ return b.p - a.p; });
+      for(i=0; i<targets.length && rem>0; i++, rem--){ out[targets[i].b] += 1; }
+      return out;
+    })();
+
+    // -------------------- Pie Callout Plugin & Title --------------------
+    var calloutLabelsPlugin = {
+      id: 'calloutLabels',
+      afterDatasetsDraw: function(chart){
+        var ds = chart.data && chart.data.datasets && chart.data.datasets[0];
+        if(!ds) return;
+        var meta = chart.getDatasetMeta(0); if(!meta) return;
+        var ctx = chart.ctx; ctx.save();
+        ctx.strokeStyle = '#64748b'; ctx.fillStyle = '#cbd5e1'; ctx.lineWidth = 1; ctx.font = '12px Inter, Arial, sans-serif';
+        for(var i=0;i<meta.data.length;i++){
+          var el = meta.data[i]; if(!el || el.hidden) continue;
+          var p = el.tooltipPosition();
+          var cx = (chart.chartArea.left + chart.chartArea.right)/2;
+          var cy = (chart.chartArea.top + chart.chartArea.bottom)/2;
+          var dx = p.x - cx, dy = p.y - cy;
+          var len = Math.sqrt(dx*dx + dy*dy) || 1; dx/=len; dy/=len;
+          var ax = p.x + dx*30, ay = p.y + dy*30; // extend for bigger pie
+          var hx = ax + (dx>0 ? 70 : -70), hy = ay;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(ax, ay); ctx.lineTo(hx, hy); ctx.stroke();
+          ctx.textAlign = (dx>0 ? 'left' : 'right'); ctx.textBaseline = 'middle';
+          var lbl = (chart.data && chart.data.labels && chart.data.labels[i]) ? chart.data.labels[i] : '';
+          ctx.fillText(lbl, hx + (dx>0?10:-10), hy);
+        }
+        ctx.restore();
+      }
+    };
+
+    var chartTitlePlugin = {
+      id: 'chartTitle',
+      afterDraw: function(chart){
+        if(!chart || !chart.chartArea) return;
+        var pad = 0;
+        if(chart.options && chart.options.layout && chart.options.layout.padding){ pad = chart.options.layout.padding|0; }
+        var ctx = chart.ctx; ctx.save();
+        ctx.fillStyle = '#9fb0c5';
+        ctx.font = '600 13px Inter, Arial, sans-serif';
+        // Draw in the top-left corner of the canvas frame (inside the border), not the chart area
+        var x = (chart.chartArea.left - pad) + 8;
+        var y = (chart.chartArea.top  - pad) + 16;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillText('Top 3 Brands Today', x, y);
+        ctx.restore();
+      }
+    };
+
+    // -------------------- Render Global --------------------
+    var topBrandsChart = null;
+    function renderGlobal(){
+      // Top 3 brands
+      var pairs = []; var i;
+      for(i=0;i<BRANDS.length;i++){ var br = BRANDS[i]; pairs.push([br, brandSales[br]||0]); }
+      pairs.sort(function(a,b){ return b[1]-a[1]; });
+      var top3 = pairs.slice(0,3);
+
+      // Cards (right side)
+      var topName = '', topSales = -1;
+      for(i=0; i<stores.length; i++){ if(stores[i].totals.sales > topSales){ topSales = stores[i].totals.sales; topName = stores[i].name; } }
+      document.getElementById('cardTopStore').textContent = topName;
+      document.getElementById('cardTotalSales').textContent = nf.format(overall.sales);
+      document.getElementById('cardTotalVisits').textContent = nf.format(overall.visits);
+      document.getElementById('cardConvRate').textContent = pct(overall.conv*100,1) + ' %';
+
+      // Doughnut chart
+      var canvas = document.getElementById('topBrandsChart');
+      if(canvas && canvas.getContext){
+        var ctx = canvas.getContext('2d');
+        var labels = [ top3[0][0], top3[1][0], top3[2][0] ];
+        var data   = [ top3[0][1], top3[1][1], top3[2][1] ];
+        var c1 = ['#2f4858','#355d6d','#5b3a69'];
+        var c2 = ['#6b8aa8','#86a5b5','#9a86a5'];
+        if(topBrandsChart){ try{ topBrandsChart.destroy(); }catch(e){} }
+        topBrandsChart = new Chart(ctx, {
+          type:'doughnut',
+          data:{ labels: labels, datasets:[{ label:'', data: data, backgroundColor: function(c){ var idx=c.dataIndex; return makeLinearGradient(c, c1[idx], c2[idx]); }, borderColor:'#0b1220', borderWidth:1 }]},
+          plugins:[calloutLabelsPlugin, chartTitlePlugin],
+          options:{ responsive:true, maintainAspectRatio:false, layout:{ padding:56 }, radius:'82%', cutout:'45%', rotation:-90, circumference:360, plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } } }
+        });
+      }
+
+      // Footer (updated inside render)
+      var now = new Date();
+      document.getElementById('updated').textContent = 'Last updated: ' + (now.toLocaleString ? now.toLocaleString('en-US') : now);
+    }
+
+    // -------------------- Store Cards --------------------
+    function buildMini(labelText, numberText, highlight){
+      var mini = document.createElement('div'); mini.className = 'mini' + (highlight?' highlight':'');
+      var l = document.createElement('div'); l.className='label'; l.textContent = labelText;
+      var n = document.createElement('div'); n.className='number'; n.textContent = numberText;
+      mini.appendChild(l); mini.appendChild(n); return mini;
+    }
+
+    function storeCardTemplate(store, idx){
+      var el = document.createElement('div'); el.className='card';
+
+      var head = document.createElement('div'); head.className='row-between'; head.style.marginBottom='8px';
+      var left = document.createElement('div'); left.className='row';
+      var dot = document.createElement('span'); dot.className = 'dot' + (store.online?'':' off'); dot.title = store.online?'Online':'Offline';
+      var strong = document.createElement('strong'); strong.style.fontSize='18px'; strong.textContent = store.name;
+      left.appendChild(dot); left.appendChild(strong); head.appendChild(left); el.appendChild(head);
+
+      var triple = document.createElement('div'); triple.className='triple';
+      triple.appendChild(buildMini('Convertion Rate', pct(store.convRate*100,1)+' %', false));
+      triple.appendChild(buildMini('Sales', nf.format(store.totals.sales), true));
+      triple.appendChild(buildMini('Visits', nf.format(store.totals.visits), false));
+      el.appendChild(triple);
+
+      var k1 = document.createElement('div'); k1.className='kpi'; k1.textContent='Visits & Sales'; el.appendChild(k1);
+      var wrap1 = document.createElement('div'); wrap1.className='chart-wrap';
+      var canv = document.createElement('canvas'); canv.id = 'chart-'+idx; canv.setAttribute('role','img'); canv.setAttribute('aria-label','Visits and Sales by hour'); wrap1.appendChild(canv); el.appendChild(wrap1);
+
+      var k2 = document.createElement('div'); k2.className='kpi'; k2.style.marginTop='10px'; k2.textContent='Stock'; el.appendChild(k2);
+      var list = document.createElement('div'); list.className='level-list'; list.id = 'stocklist-'+idx; el.appendChild(list);
+
+      return el;
+    }
+
+    function renderStores(){
+      var host = document.getElementById('stores'); host.innerHTML='';
+      for(var i=0;i<stores.length;i++){
+        var st = stores[i]; var card = storeCardTemplate(st, i); host.appendChild(card);
+
+        // Visits vs Sales chart
+        var canvas = document.getElementById('chart-'+i);
+        if(!canvas || !canvas.getContext){ continue; }
+        var context = canvas.getContext('2d'); if(!context){ continue; }
+        new Chart(context, {
+          type:'bar',
+          data:{ labels: HOURS, datasets:[
+            { label:'', data: st.visits, backgroundColor:function(ctx){ return makeLinearGradient(ctx,'#2f4858','#6b8aa8'); }, borderWidth:0, borderRadius:6 },
+            { label:'', data: st.sales,  backgroundColor:function(ctx){ return makeLinearGradient(ctx,'#5b3a69','#9a86a5'); }, borderWidth:0, borderRadius:6 }
+          ]},
+          options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false }, tooltip:{ mode:'index', intersect:false } }, scales:{ x:{ ticks:{ color:'#cbd5e1' }, grid:{ color:'#334155' } }, y:{ beginAtZero:true, ticks:{ color:'#cbd5e1', stepSize:50, callback:function(v){ return nf.format(v); } }, grid:{ color:'#334155' } } } }
+        });
+
+        // Stock level indicators
+        var list = document.getElementById('stocklist-'+i);
+        var maxQ = 1; var entries = []; var b;
+        for(b=0;b<BRANDS.length;b++){ var brand=BRANDS[b], q=st.stock[brand]||0; entries.push([brand,q]); if(q>maxQ) maxQ=q; }
+        for(b=0;b<entries.length;b++){
+          var brandName = entries[b][0]; var qv = entries[b][1];
+          var percent = Math.round(qv/maxQ*100); var critical = percent < 15;
+          var row = document.createElement('div'); row.className='level';
+          var nameEl = document.createElement('div'); nameEl.className='brand'; nameEl.textContent = brandName;
+          var barWrap = document.createElement('div'); barWrap.className='level-bar';
+          var fill = document.createElement('div'); fill.className='level-fill'; fill.style.width = percent + '%'; barWrap.appendChild(fill);
+          var dot2 = document.createElement('span'); dot2.className = 'status-dot' + (critical?' bad':''); dot2.title = critical?'Low stock':'OK';
+          row.appendChild(nameEl); row.appendChild(barWrap); row.appendChild(dot2); list.appendChild(row);
+        }
+      }
+    }
+
+    // -------------------- Self Tests --------------------
+    function runSelfTests(){
+      var tests = [];
+      function assert(name, cond){ tests.push({name:name, pass: !!cond}); }
+
+      assert('Rendered store cards', document.querySelectorAll('#stores .card').length === stores.length);
+      assert('Four store cards', document.querySelectorAll('#stores .card').length === 4);
+
+      var calcVisits=0, calcSales=0; for(var i=0;i<stores.length;i++){ calcVisits+=stores[i].totals.visits; calcSales+=stores[i].totals.sales; }
+      assert('Overall visits match sum of stores', calcVisits === overall.visits);
+      assert('Overall sales match sum of stores',  calcSales  === overall.sales);
+
+      var ctxOk = true; for(var j=0;j<stores.length;j++){ var c=document.getElementById('chart-'+j); ctxOk = ctxOk && !!(c && c.getContext && c.getContext('2d')); }
+      assert('Canvas contexts available', ctxOk);
+
+      assert('Top brands chart canvas present', !!document.getElementById('topBrandsChart'));
+      assert('Global KPI cards count', document.querySelectorAll('#globalCard .stack .mini').length === 4);
+
+      var expectedTopName='', expectedTopSales=-1; for(var s=0;s<stores.length;s++){ if(stores[s].totals.sales>expectedTopSales){ expectedTopSales=stores[s].totals.sales; expectedTopName=stores[s].name; } }
+      assert('Top store chosen', document.getElementById('cardTopStore').textContent === expectedTopName);
+
+      function redCountFor(storeName){
+        var cards = document.querySelectorAll('#stores .card');
+        for(var i=0;i<cards.length;i++){
+          var t = cards[i].querySelector('strong'); if(t && t.textContent === storeName){ return cards[i].querySelectorAll('.status-dot.bad').length; }
+        }
+        return 0;
+      }
+      assert('Munich shows critical stock', redCountFor('Munich') >= 1);
+      assert('Hamburg shows critical stock', redCountFor('Hamburg') >= 1);
+
+      assert('Updated timestamp set', document.getElementById('updated').textContent.indexOf('Last updated:') === 0 || document.getElementById('updated').textContent.length > 3);
+
+      if(window.console){
+        if(console.groupCollapsed){ console.groupCollapsed('Dashboard self-tests'); }
+        for(var k=0;k<tests.length;k++){
+          var msg=(tests[k].pass?'PASS':'FAIL')+': '+tests[k].name;
+          if(tests[k].pass){ console.log(msg); } else { console.error(msg); }
+        }
+        if(console.groupEnd){ console.groupEnd(); }
+      }
+    }
+
+    // -------------------- Boot --------------------
+    function ready(fn){ if(document.readyState !== 'loading') fn(); else document.addEventListener('DOMContentLoaded', function(){ fn(); }, false); }
+    ready(function(){ renderGlobal(); renderStores(); runSelfTests(); });
+  </script>
+</body>
+</html>
