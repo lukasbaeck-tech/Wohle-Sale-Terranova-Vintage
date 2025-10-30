@@ -33,6 +33,26 @@
     .badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#162235;color:#cbd5e1;border:1px solid #223045}
     .btn{display:inline-block;font-size:13px;padding:8px 12px;border-radius:10px;border:1px solid #223045;background:#0e1524;color:#cbd5e1;text-decoration:none}
     .btn:hover{background:#132036;color:#e5e7eb}
+
+    /* Emphasize and center the inventory button */
+    .button-row{ display:flex; justify-content:center; margin-top:14px }
+    #addBtn{ font-size:16px; padding:12px 18px; border-color:#2a3b58; color:#e7edf5; background:#0e1524; box-shadow:0 2px 10px rgba(0,0,0,.25), 0 0 0 1px rgba(107,138,168,.15) inset }
+    #addBtn:hover{ background:#132036; color:#ffffff; box-shadow:0 3px 12px rgba(0,0,0,.28), 0 0 0 1px rgba(107,138,168,.18) inset }
+    #addBtn:disabled{ opacity:.7; cursor:not-allowed }
+
+    /* Simple modal dialog */
+    .modal{ position:fixed; inset:0; display:none; z-index:1000 }
+    .modal.open{ display:block }
+    .modal-overlay{ position:absolute; inset:0; background:rgba(2,8,23,.65); backdrop-filter:blur(2px) }
+    .modal-content{ position:absolute; left:50%; top:50%; transform:translate(-50%, -50%); width:min(480px, 92vw) }
+    .modal-content.card{ padding:20px }
+    .modal-title{ font-weight:700; font-size:16px; color:#e7edf5 }
+
+    /* Progress styling */
+    progress{ width:100%; height:12px; background:#0b1220; border:1px solid #1e293b; border-radius:999px; overflow:hidden }
+    progress::-webkit-progress-bar{ background:#0b1220; border-radius:999px }
+    progress::-webkit-progress-value{ background:linear-gradient(90deg,#2f4858,#6b8aa8); border-radius:999px }
+    progress::-moz-progress-bar{ background:linear-gradient(90deg,#2f4858,#6b8aa8) }
   </style>
 </head>
 <body>
@@ -65,6 +85,25 @@
         </table>
       </div>
 
+      <div class="button-row">
+        <button type="button" class="btn" id="addBtn">Add to Store Inventory</button>
+      </div>
+
+      <div class="kpi" id="actionMsg" style="margin-top:10px; display:none"></div>
+
+      <!-- Modal dialog for progress -->
+      <div class="modal" id="inventoryModal" aria-hidden="true">
+        <div class="modal-overlay"></div>
+        <div class="modal-content card">
+          <div class="row-between" style="margin-bottom:10px">
+            <div class="modal-title">Adding Inventory</div>
+            <button type="button" class="btn" id="modalClose" style="padding:4px 8px;font-size:12px">Close</button>
+          </div>
+          <progress id="modalProgress" max="100" value="0" aria-label="Progress"></progress>
+          <div class="kpi" id="modalText" style="margin-top:8px">Processing…</div>
+        </div>
+      </div>
+
       <div class="foot" id="updated"></div>
     </div>
   </div>
@@ -80,6 +119,13 @@
       var host   = document.getElementById('stockRows');
       var badge  = document.getElementById('storeBadge');
       var footer = document.getElementById('updated');
+      var addBtn = document.getElementById('addBtn');
+      var actionMsg = document.getElementById('actionMsg');
+      var modal = document.getElementById('inventoryModal');
+      var modalClose = document.getElementById('modalClose');
+      var modalOverlay = document.querySelector('#inventoryModal .modal-overlay');
+      var modalProgress = document.getElementById('modalProgress');
+      var modalText = document.getElementById('modalText');
 
       function cell(tag, text){
         var td = document.createElement(tag);
@@ -127,6 +173,47 @@
         var now = new Date();
         footer.textContent = 'Last updated: ' + (now.toLocaleString ? now.toLocaleString('en-US') : now);
       });
+
+      function openModal(){ if(modal){ modal.classList.add('open'); modal.setAttribute('aria-hidden','false'); } }
+      function closeModal(){ if(modal){ modal.classList.remove('open'); modal.setAttribute('aria-hidden','true'); } }
+
+      if(modalClose){ modalClose.addEventListener('click', closeModal); }
+      if(modalOverlay){ modalOverlay.addEventListener('click', closeModal); }
+
+      // Add to inventory action: clear table, show modal with 0.2s progress, then show message
+      if(addBtn){
+        addBtn.addEventListener('click', function(){
+          // Clear table data immediately
+          host.innerHTML = '';
+          badge.textContent = '0 records';
+          actionMsg.textContent = '';
+          actionMsg.style.display = 'none';
+
+          // Show dialog and simulate quick progress (0.2s)
+          openModal();
+          addBtn.disabled = true;
+          if(modalProgress){ modalProgress.value = 0; }
+          if(modalText){ modalText.textContent = 'Processing…'; }
+
+          var start = Date.now();
+          var duration = 500; // 0.5s
+          var timer = setInterval(function(){
+            var elapsed = Date.now() - start;
+            var pct = Math.min(100, Math.round((elapsed / duration) * 100));
+            if(modalProgress){ modalProgress.value = pct; }
+            if(elapsed >= duration){
+              clearInterval(timer);
+              if(modalProgress){ modalProgress.value = 100; }
+              if(modalText){ modalText.textContent = 'all inventory added'; }
+              actionMsg.textContent = 'all inventory added';
+              actionMsg.style.display = 'block';
+              addBtn.disabled = false;
+              // Auto-close the dialog when finished
+              closeModal();
+            }
+          }, 25);
+        });
+      }
     })();
   </script>
 </body>
