@@ -1,0 +1,5 @@
+[[redirects]]
+  from = "/api/get-stock"
+  to = "https://n8n.syneroflow.at/webhook-test/ffcb4e47-67e1-45fc-a4d0-6237de37f17e"
+  status = 200
+  force = true
